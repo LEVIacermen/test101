@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hijab Billing Calculator — Preview</title>
+  <style>
+    :root{
+      --bg: #f1e3d6;
+      --card: #fff;
+      --muted: #6b5b4b;
+      --accent: #b89a80;
+      --text: #1f1f1f;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      color:var(--text);
+      padding:24px;
+    }
+    .container{ max-width:1100px; margin:0 auto; }
+    header{ text-align:center; margin-bottom:18px;}
+    header img{ width:120px; height:120px; object-fit:contain; border-radius:6px; display:block; margin:0 auto 8px;}
+    header h1{ margin:0; font-size:20px; letter-spacing:1px; color:var(--muted); font-weight:600; }
+    header p{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+    .card{ background:var(--card); border-radius:10px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin-bottom:14px; }
+    .flex{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    label{ font-size:14px; color:var(--muted); }
+    select, input[type="number"], input[type="text"]{ padding:8px 10px; font-size:14px; border:1px solid #e3d7cc; border-radius:6px; background:#fff; }
+    button{ padding:8px 12px; border-radius:8px; border:0; cursor:pointer; background:var(--accent); color:#fff; font-weight:600; }
+    button.secondary{ background:#888; }
+    button.ghost{ background:transparent; color:var(--muted); border:1px solid #e6e0db; }
+    table{ width:100%; border-collapse:collapse; margin-top:12px;}
+    th,td{ padding:10px; border:1px solid #eee; font-size:14px; text-align:left; }
+    th{ background:#faf5f0; color:var(--muted); }
+    td.right{text-align:right;}
+    .summary{ text-align:right; font-size:16px; margin-top:10px; }
+    .small{ font-size:13px; color:var(--muted); }
+    #managePanel{ display:none; margin-top:12px; }
+    .topnav{ display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; align-items:center; }
+    .search{ padding:8px; width:260px; border-radius:8px; border:1px solid #e6e0db; }
+    @media (max-width:700px){
+      header img{ width:90px; height:90px; }
+      .flex{ flex-direction:column; align-items:flex-start; }
+      .summary{ text-align:left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <!-- Updated logo path (preview) -->
+      <img id="logo" src="/mnt/data/WhatsApp Image 2025-07-21 at 11.42.45_8e4aeaa0.jpg" alt="Haya and Grace Logo">
+      <h1>Hijab Billing Calculator</h1>
+      <p class="small">Tool for sellers — quick billing, editable rates, persistent prices</p>
+    </header>
+
+    <div class="card">
+      <div class="flex" style="align-items:center;">
+        <div>
+          <label>Category</label><br>
+          <select id="categorySelect">
+            <option value="hijab">Hijabs</option>
+            <option value="accessory">Accessories</option>
+          </select>
+        </div>
+
+        <div style="flex:1; min-width:220px;">
+          <label>Product</label><br>
+          <!-- productSelect will start with a placeholder; nothing selected by default -->
+          <select id="productSelect" style="width:100%;">
+            <!-- populated by JS -->
+          </select>
+        </div>
+
+        <div>
+          <label>Unit Price (editable)</label><br>
+          <input id="unitPrice" type="number" min="0" step="0.01" value="" style="width:130px;" placeholder="—">
+        </div>
+
+        <div>
+          <label>Qty</label><br>
+          <input id="qty" type="number" min="1" step="1" value="1" style="width:90px;">
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="addBtn">Add to Cart</button>
+          <button id="openManage" class="ghost">Manage Products</button>
+          <button id="clearCartBtn" class="secondary">Clear Cart</button>
+        </div>
+      </div>
+
+      <div id="cartArea" style="margin-top:14px;">
+        <table id="cartTable" aria-live="polite">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Unit Price</th><th>Qty</th><th>Line Total</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px; align-items:center;">
+          <label class="small">Delivery Charges ₹</label>
+          <input id="delivery" type="number" min="0" step="0.01" value="0.00" style="width:120px;">
+        </div>
+
+        <div class="summary">
+          <div class="small">Subtotal: ₹<span id="subtotal">0.00</span></div>
+          <div class="small">Delivery: ₹<span id="deliveryShow">0.00</span></div>
+          <div style="font-size:18px; margin-top:6px;"><strong>Grand Total: ₹<span id="grandTotal">0.00</span></strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="managePanel" class="card">
+      <div class="topnav">
+        <div class="flex" style="align-items:center;">
+          <button id="closeManage" class="ghost">Close</button>
+          <input id="searchProduct" class="search" placeholder="Search product by name...">
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="saveProducts" style="background:#2b8f6b">Save Changes</button>
+        </div>
+      </div>
+
+      <div style="overflow:auto; max-height:320px;">
+        <table id="manageTable">
+          <thead>
+            <tr><th>#</th><th>Category</th><th>Product Name</th><th>Price (₹)</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <hr style="margin:12px 0">
+
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label>Category</label>
+        <select id="newCategory">
+          <option value="hijab">Hijab</option>
+          <option value="accessory">Accessory</option>
+        </select>
+
+        <label>Product Name</label>
+        <input id="newName" type="text" placeholder="Ex: New Satin Hijab" style="width:260px;">
+
+        <label>Price (₹)</label>
+        <input id="newPrice" type="number" min="0" step="0.01" value="0.00" style="width:120px;">
+
+        <button id="addProductBtn">Add Product</button>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+const defaultProducts = [
+{ id: 1, name: "Georgette Hijab", price:149, category:"hijab"},
+{ id: 2, name: "Satin Hijab", price:239, category:"hijab"},
+{ id: 3, name: "Shimmer Georgette Hijab", price:209, category:"hijab"},
+{ id: 4, name: "Modal Hijab", price:209, category:"hijab"},
+{ id: 5, name: "Soft Organza Hijab", price:239, category:"hijab"},
+{ id: 6, name: "Premium Modal hijab", price:229, category:"hijab"},
+{ id: 7, name: "Viscose Scarf", price:229, category:"hijab"},
+{ id: 8, name: "Floral Hijab", price:199, category:"hijab"},
+{ id: 9, name: "Crinkled Cotton hijab", price:169, category:"hijab"},
+{ id:10, name: "Valvet Satin", price:259, category:"hijab"},
+{ id:11, name: "Textured Jersey", price:239, category:"hijab"},
+{ id:12, name: "Chiffon Crochett Hijab", price:199, category:"hijab"},
+{ id:13, name: "Rhine Stone Hijab", price:259, category:"hijab"},
+{ id:14, name: "Shiny Muna Satin", price:249, category:"hijab"},
+{ id:15, name: "Pashmina Hijab", price:279, category:"hijab"},
+{ id:16, name: "Embroidery Georgette", price:229, category:"hijab"},
+{ id:17, name: "Turkish Stone", price:235, category:"hijab"},
+{ id:18, name: "Floral Cotton", price:219, category:"hijab"},
+{ id:19, name: "Zara Plain", price:190, category:"hijab"},
+{ id:20, name: "Heavy Chiffon Shimmer", price:179, category:"hijab"},
+{ id:21, name: "Muna Satin", price:249, category:"hijab"},
+{ id:22, name: "Starlit Satin Stone", price:259, category:"hijab"},
+{ id:23, name: "Kashta", price:229, category:"hijab"},
+{ id:24, name: "Ribbed Jersey", price:239, category:"hijab"},
+{ id:25, name: "Pashmina Inspired Viscose hijab", price:229, category:"hijab"},
+{ id:26, name: "Instant Hijab", price:229, category:"hijab"},
+{ id:27, name: "Shimmer Satin", price:259, category:"hijab"},
+{ id:28, name: "Bamboo Jersey", price:239, category:"hijab"},
+{ id:29, name: "Silk Organza", price:189, category:"hijab"},
+{ id:30, name: "2m Georgette", price:175, category:"hijab"},
+{ id:31, name: "Bubble Satin Stone", price:249, category:"hijab"},
+{ id:32, name: "Velvet Satin Stone", price:259, category:"hijab"},
+{ id:33, name: "Jersey Stone", price:239, category:"hijab"},
+{ id:34, name: "Organza", price:199, category:"hijab"},
+{ id:35, name: "Pashmina Shawl 1", price:549, category:"hijab"},
+{ id:36, name: "Pashmina Shawl 2", price:549, category:"hijab"},
+{ id:37, name: "Pashmina Silk Mix 1", price:599, category:"hijab"},
+{ id:38, name: "Namazi Odhni", price:150, category:"hijab"},
+{ id:1001, name:"Tube Caps", price:70, category:"accessory"},
+{ id:1002, name:"Tie Caps", price:50, category:"accessory"},
+{ id:1003, name:"Ninja Cap", price:130, category:"accessory"},
+{ id:1004, name:"4 in 1 Cap", price:110, category:"accessory"},
+{ id:1005, name:"Ribbed Cap", price:80, category:"accessory"},
+{ id:1006, name:"Magnetic Pin", price:80, category:"accessory"},
+{ id:1007, name:"Loop Pin", price:10, category:"accessory"},
+{ id:1008, name:"Hijab Pin(circle/hanging)", price:25, category:"accessory"},
+{ id:1009, name:"Marble Pin/Flower Pin", price:20, category:"accessory"},
+{ id:1010, name:"Ball pin box", price:60, category:"accessory"},
+{ id:1011, name:"Pin Combo Set", price:250, category:"accessory"},
+{ id:1012, name:"Hijab Tape", price:60, category:"accessory"},
+{ id:1013, name:"Gloves", price:50, category:"accessory"},
+{ id:1014, name:"Sleeve Extender", price:50, category:"accessory"},
+{ id:1015, name:"Chicken Sleeve Extender", price:60, category:"accessory"},
+{ id:1016, name:"Folding Janimaz", price:749, category:"accessory"},
+{ id:1017, name:"Cone Janimaz", price:449, category:"accessory"},
+{ id:1018, name:"Plain Square Janimaz", price:419, category:"accessory"},
+{ id:1019, name:"Printed Janimaz", price:349, category:"accessory"},
+{ id:1020, name:"Small Niqab", price:100, category:"accessory"},
+{ id:1021, name:"Medium Niqab", price:109, category:"accessory"},
+{ id:1022, name:"Large Niqab", price:119, category:"accessory"},
+{ id:1023, name:"Bouquet", price:0, category:"accessory"},
+{ id:1024, name:"Scrunchies", price:10, category:"accessory"},
+];
+
+const STORAGE_KEY = 'jab_products_v1';
+
+function loadProducts(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length>0) return parsed;
+    }catch(e){}
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultProducts));
+  return defaultProducts.slice();
+}
+function saveProducts(products){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+}
+
+let products = loadProducts();
+let cart = [];
+
+const categorySelect = document.getElementById('categorySelect');
+const productSelect = document.getElementById('productSelect');
+const unitPrice = document.getElementById('unitPrice');
+const qty = document.getElementById('qty');
+const addBtn = document.getElementById('addBtn');
+const cartTableBody = document.querySelector('#cartTable tbody');
+const delivery = document.getElementById('delivery');
+const subtotalEl = document.getElementById('subtotal');
+const grandTotalEl = document.getElementById('grandTotal');
+const deliveryShow = document.getElementById('deliveryShow');
+const clearCartBtn = document.getElementById('clearCartBtn');
+
+const openManage = document.getElementById('openManage');
+const managePanel = document.getElementById('managePanel');
+const closeManage = document.getElementById('closeManage');
+const manageTableBody = document.querySelector('#manageTable tbody');
+const saveProductsBtn = document.getElementById('saveProducts');
+const addProductBtn = document.getElementById('addProductBtn');
+const newCategory = document.getElementById('newCategory');
+const newName = document.getElementById('newName');
+const newPrice = document.getElementById('newPrice');
+const searchProduct = document.getElementById('searchProduct');
+
+function populateProductDropdown(){
+  const cat = categorySelect.value;
+  productSelect.innerHTML = '';
+  // placeholder option, no selection by default
+  const placeholder = document.createElement('option');
+  placeholder.value = "";
+  placeholder.textContent = "— Select product —";
+  placeholder.selected = true;
+  placeholder.hidden = false;
+  productSelect.appendChild(placeholder);
+
+  const filtered = products.filter(p => p.category === cat);
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} — ₹${Number(p.price).toFixed(2)}`;
+    opt.dataset.price = Number(p.price).toFixed(2);
+    productSelect.appendChild(opt);
+  });
+  // set unit price empty until user selects a product
+  unitPrice.value = "";
+}
+
+function findProductById(id){
+  return products.find(p => Number(p.id) === Number(id));
+}
+
+function addToCart(){
+  const pid = productSelect.value;
+  if(!pid) return alert('Please select a product.');
+  const prod = findProductById(pid);
+  if(!prod) return alert('Select a valid product.');
+  const price = Math.max(0, Number(unitPrice.value) || 0);
+  const q = Math.max(1, Math.floor(Number(qty.value) || 1));
+  const lineId = Date.now() + Math.floor(Math.random()*1000);
+  cart.push({ lineId, productId: prod.id, name: prod.name, unitPrice: price, qty: q });
+  renderCart();
+}
+
+function renderCart(){
+  cartTableBody.innerHTML = '';
+  let subtotal = 0;
+  cart.forEach((line, idx) => {
+    const lineTotal = (Number(line.unitPrice) * Number(line.qty)) || 0;
+    subtotal += lineTotal;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${escapeHtml(line.name)}</td>
+      <td><input type="number" step="0.01" min="0" class="linePrice" data-line="${line.lineId}" value="${Number(line.unitPrice).toFixed(2)}" style="width:110px"></td>
+      <td><input type="number" step="1" min="0" class="lineQty" data-line="${line.lineId}" value="${line.qty}" style="width:80px"></td>
+      <td class="right">₹${Number(lineTotal).toFixed(2)}</td>
+      <td><button class="removeBtn" data-line="${line.lineId}" style="background:#c0392b">Remove</button></td>
+    `;
+    cartTableBody.appendChild(tr);
+  });
+
+  subtotalEl.textContent = subtotal.toFixed(2);
+  const deliveryVal = Math.max(0, Number(delivery.value) || 0);
+  deliveryShow.textContent = deliveryVal.toFixed(2);
+  grandTotalEl.textContent = (subtotal + deliveryVal).toFixed(2);
+
+  document.querySelectorAll('.removeBtn').forEach(b => b.onclick = (e) => {
+    const id = Number(e.currentTarget.dataset.line);
+    cart = cart.filter(c => c.lineId !== id);
+    renderCart();
+  });
+  document.querySelectorAll('.lineQty').forEach(inp => inp.oninput = (e) => {
+    const id = Number(e.currentTarget.dataset.line);
+    const val = Math.max(0, Math.floor(Number(e.currentTarget.value) || 0));
+    cart = cart.map(c => c.lineId===id ? {...c, qty: val} : c);
+    renderCart();
+  });
+  document.querySelectorAll('.linePrice').forEach(inp => inp.oninput = (e) => {
+    const id = Number(e.currentTarget.dataset.line);
+    const val = Math.max(0, Number(e.currentTarget.value) || 0);
+    cart = cart.map(c => c.lineId===id ? {...c, unitPrice: val} : c);
+    renderCart();
+  });
+}
+
+function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function openManagePanel(){
+  managePanel.style.display = 'block';
+  renderManageTable();
+}
+function closeManagePanel(){
+  managePanel.style.display = 'none';
+}
+function renderManageTable(filter=''){
+  manageTableBody.innerHTML = '';
+  let shown = products;
+  if(filter && filter.trim()!==''){
+    const f = filter.trim().toLowerCase();
+    shown = products.filter(p => p.name.toLowerCase().includes(f));
+  }
+  shown.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${p.category}</td>
+      <td><input class="mgName" data-id="${p.id}" value="${escapeHtml(p.name)}" style="width:100%"></td>
+      <td><input class="mgPrice" data-id="${p.id}" type="number" step="0.01" min="0" value="${Number(p.price).toFixed(2)}" style="width:100px"></td>
+      <td><button class="delProd" data-id="${p.id}" style="background:#c0392b">Delete</button></td>
+    `;
+    manageTableBody.appendChild(tr);
+  });
+
+  document.querySelectorAll('.delProd').forEach(btn => btn.onclick = (e) => {
+    const id = Number(e.currentTarget.dataset.id);
+    if(!confirm('Delete this product? This action cannot be undone.')) return;
+    products = products.filter(pp => Number(pp.id)!==id);
+    saveProducts(products);
+    renderManageTable(searchProduct.value);
+    populateProductDropdown();
+  });
+}
+
+function applyManageEdits(){
+  document.querySelectorAll('.mgName').forEach(inp => {
+    const id = Number(inp.dataset.id);
+    const p = products.find(pp => Number(pp.id)===id);
+    if(p) p.name = inp.value.trim() || p.name;
+  });
+  document.querySelectorAll('.mgPrice').forEach(inp => {
+    const id = Number(inp.dataset.id);
+    const p = products.find(pp => Number(pp.id)===id);
+    if(p) p.price = Math.max(0, Number(inp.value) || 0);
+  });
+  saveProducts(products);
+  alert('Product list saved.');
+  populateProductDropdown();
+  renderManageTable(searchProduct.value);
+}
+
+function addNewProduct(){
+  const cat = newCategory.value;
+  const name = (newName.value || '').trim();
+  const price = Math.max(0, Number(newPrice.value) || 0);
+  if(!name) return alert('Enter a product name.');
+  let newId = Math.floor(Date.now()%1000000);
+  while(products.some(p => p.id === newId)){
+    newId = Math.floor(Math.random()*1000000);
+  }
+  products.push({ id: newId, name, price, category: cat==='hijab' ? 'hijab' : 'accessory' });
+  saveProducts(products);
+  newName.value = '';
+  newPrice.value = '0.00';
+  populateProductDropdown();
+  renderManageTable(searchProduct.value);
+  alert('New product added.');
+}
+
+/* Event wiring */
+categorySelect.onchange = () => {
+  populateProductDropdown();
+};
+productSelect.onchange = () => {
+  const pid = productSelect.value;
+  if(!pid){
+    unitPrice.value = "";
+    return;
+  }
+  const p = findProductById(pid);
+  if(p) unitPrice.value = Number(p.price).toFixed(2);
+};
+addBtn.onclick = addToCart;
+clearCartBtn.onclick = () => { if(confirm('Clear cart?')) { cart=[]; renderCart(); } };
+delivery.oninput = renderCart;
+openManage.onclick = openManagePanel;
+closeManage.onclick = closeManagePanel;
+saveProductsBtn.onclick = applyManageEdits;
+addProductBtn.onclick = addNewProduct;
+searchProduct.oninput = () => renderManageTable(searchProduct.value);
+
+/* initial population */
+populateProductDropdown();
+renderCart();
+</script>
+</body>
+</html>
